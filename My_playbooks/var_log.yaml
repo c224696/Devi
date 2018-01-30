@@ -1,0 +1,56 @@
+---
+- hosts: nodes
+
+  tasks:
+
+   - name: taking tar of /var/log
+#     archive: path=/var/log/ dest=/var/log/var_log.tar 
+     command: tar -cf /var/log/var_log.tar . chdir=/var/log
+
+   - name: moving the tarred file to /root
+     shell: mv /var/log/var_log.tar /root/
+
+   - name: unmounting  /var/logose
+     mount: path=/var/logose state=unmounted
+   
+   - name: unmounting /docker
+     mount: path=/docker state=unmounted
+
+   - name: commenting the logose fstab lines
+     shell: sed -i '/\/var\/logose/s/^/#/' /etc/fstab
+
+   - name: commenting the docker fstab lines
+     shell: sed -i '/\/docker/s/^/#/' /etc/fstab
+
+   - name: making new entry /dev/var_logose_vg/var_logose_lv on /var/log
+     mount: path=/var/log src=/dev/var_logose_vg/var_logose_lv state=present fstype=xfs 
+   
+   - name: mounting  /dev/var_logose_vg/var_logose_lv on /var/log
+     mount: path=/var/log src=/dev/var_logose_vg/var_logose_lv state=mounted fstype=xfs
+
+
+   - name: untarring /var/log content
+     shell: tar -xf /root/var_log.tar . chdir=/var/log
+##    unarchive: src=/root/var_log.tar dest=/var/log/ remote_src=yes
+
+   - name: finding out the device for docker-vg
+     shell: lvs -ao +devices --noheadings | grep docker | awk '{print $5}'  | awk -F '(' '{print $1}'
+     register: device
+
+
+   - name: removing volume group
+     lvg: vg=docker_vg state=absent force=yes
+     tags:
+       - debug
+
+   - name: removing physical group
+     shell: pvremove "{{ device.stdout }}"
+
+   - name: removing partition from device
+     parted: device=/dev/sdd  number=1 state=absent
+     when: device.stdout == "/dev/sdd1"
+
+   - name: formatting the disk
+     shell: dd if=/dev/zero of=/dev/sdd  bs=512 count=1
+     when: device.stdout == "/dev/sdd1"
+
