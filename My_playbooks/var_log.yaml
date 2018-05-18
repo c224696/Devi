@@ -1,6 +1,8 @@
 ---
 - hosts: nodes
-
+  vars:
+    disk: /dev/sdc
+    disk1: /dev/sdc1
   tasks:
 
    - name: taking tar of /var/log
@@ -47,10 +49,10 @@
      shell: pvremove "{{ device.stdout }}"
 
    - name: removing partition from device
-     parted: device=/dev/sdd  number=1 state=absent
-     when: device.stdout == "/dev/sdd1"
+     parted: device={{ disk }}  number=1 state=absent
+     when: device.stdout == "{{ disk1 }}"
 
    - name: formatting the disk
-     shell: dd if=/dev/zero of=/dev/sdd  bs=512 count=1
-     when: device.stdout == "/dev/sdd1"
+     shell: dd if=/dev/zero of={{ disk }}  bs=512 count=1
+     when: device.stdout == "{{ disk1 }}"
 
