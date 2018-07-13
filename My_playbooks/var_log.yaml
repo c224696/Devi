@@ -56,3 +56,4 @@
      shell: dd if=/dev/zero of={{ disk }}  bs=512 count=1
      when: device.stdout == "{{ disk1 }}"
 
+###End Of File#####
